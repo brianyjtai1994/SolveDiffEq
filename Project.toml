@@ -1,0 +1,4 @@
+name = "SolveDiffEq"
+uuid = "b954bf54-d75b-427c-a758-91b02d854ca4"
+authors = ["yctai <brianyjtai1994@gmail.com>"]
+version = "0.1.0"
