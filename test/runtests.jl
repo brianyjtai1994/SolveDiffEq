@@ -22,7 +22,7 @@ print_body(s::String) = println("             $s")
 
     Δt = 0.05; ans = test_func(1.0)
 
-    obj = BulirschStoer{7}(Δt, 2)               # stepper
+    obj = BulirschStoer{7}(Δt, 2)                # stepper
     arr = collect(range(0.0, 1.0; step=Δt))      # t vector
     mat = Matrix{Float64}(undef, 2, length(arr)) # y matrix
 

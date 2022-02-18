@@ -1,13 +1,10 @@
 module SolveDiffEq
 
-const VecI  = AbstractVector # Input  Vector
-const VecO  = AbstractVector # Output Vector
-const VecB  = AbstractVector # Buffer Vector
-const VecIO = AbstractVector # In/Out Vector
-const MatI  = AbstractMatrix # Input  Matrix
-const MatO  = AbstractMatrix # Output Matrix
-const MatB  = AbstractMatrix # Buffer Matrix
-const MatIO = AbstractMatrix # In/Out Matrix
+const VecI = AbstractVector # Input  Vector
+const MatI = AbstractMatrix # Input  Matrix
+const MatB = AbstractMatrix # Buffer Matrix
+const ArrI = AbstractArray  # Input  Array
+const ArrO = AbstractArray  # Output Array
 
 const ATOL = 1.0e-12
 const RTOL = 1.0e-12
@@ -51,7 +48,7 @@ function unsafe_cpy!(des::AbstractArray, src::AbstractArray)
     return nothing
 end
 
-apply_grad!(ηn::VecO, ηm::VecI, tn::Real, g!::Function) = g!(ηn, ηm, tn)
+derivative!(ηn::ArrO, ηm::ArrI, tn::Real, g!::Function) = g!(ηn, ηm, tn)
 
 # @code_warntype ✓
 # Don't use `:tuple` here, NTuple will cause
@@ -111,7 +108,7 @@ as
     f(h[2]²) = T[22] → T[23] /
     f(h[3]²) = T[33] /
 =#
-function extrap2zero!(ys::VecO, yr::VecO, ym::MatI, bm::MatB, xs::VecI, ℓ::Int)
+function extrap2zero!(ys::ArrO, yr::ArrO, ym::MatI, bm::MatB, xs::VecI, ℓ::Int)
     one2n = eachindex(ys)
 
     @inbounds for i in one2n
@@ -141,7 +138,7 @@ function extrap2zero!(ys::VecO, yr::VecO, ym::MatI, bm::MatB, xs::VecI, ℓ::Int
 end
 
 # @code_warntype ✓
-function estimate_err(ys::VecI, yr::VecI, y0::VecI)
+function estimate_err(ys::ArrI, yr::ArrI, y0::ArrI)
     err = 0.0 # error
     @inbounds for i in eachindex(y0)
         scal = ATOL + RTOL * max(abs(y0[i]), abs(yr[i])) # scale
@@ -170,7 +167,7 @@ struct BulirschStoer{LMAX}
 end
 
 # @code_warntype ✓
-function apply_step!(ys::VecO, y0::VecI, t0::Real, g!::Function, o::BulirschStoer{LMAX}) where LMAX
+function apply_step!(ys::ArrO, y0::ArrI, t0::Real, g!::Function, o::BulirschStoer{LMAX}) where LMAX
     @get o ns xs hs ηt ηm ηn ym yr bm
 
     prevE = Inf # previous error
@@ -182,12 +179,12 @@ function apply_step!(ys::VecO, y0::VecI, t0::Real, g!::Function, o::BulirschStoe
         h2 = 2.0 * hℓ
 
         unsafe_cpy!(ηm, y0)
-        apply_grad!(ηn, ηm, t0, g!)
+        derivative!(ηn, ηm, t0, g!)
         BLAS.axpby!(1., ηm, hℓ, ηn)
     
         tj = t0 + hℓ; j = 1
         while j < nℓ
-            apply_grad!(ηt, ηn, tj, g!)
+            derivative!(ηt, ηn, tj, g!)
             BLAS.axpby!(1., ηm, h2, ηt)
             @inbounds for i in one2n
                 ηm[i], ηn[i] = ηn[i], ηt[i]
@@ -195,7 +192,7 @@ function apply_step!(ys::VecO, y0::VecI, t0::Real, g!::Function, o::BulirschStoe
             tj += hℓ; j += 1
         end
     
-        apply_grad!(ηt, ηn, tj, g!)
+        derivative!(ηt, ηn, tj, g!)
         @inbounds for i in one2n
             ηt[i] = 0.5 * (ηn[i] + ηm[i] + hℓ * ηt[i])
         end
